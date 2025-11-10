@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Envs
+.venv/
+env/
+venv/
+conda-env/
+.ipynb_checkpoints/
+
+# Data & outputs (custom for your project)
+01_Raw_Phonetic_Annotated_Datasets/
+01_TIMIT_raw_dataset_whole/
+02_Buckeye/
+datasets/
+data/
+outputs/
+results/
+logs/
+checkpoints/
+wandb/
+tensorboard/
+
+# Big artifacts
+*.pt
+*.pth
+*.npy
+*.npz
+*.zip
+*.tar
+*.gz
+*.wav
+*.mp3
+*.mp4
+*.png
+*.jpg
