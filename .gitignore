@@ -15,7 +15,7 @@ conda-env/
 # Data & outputs (custom for your project)
 01_Raw_Phonetic_Annotated_Datasets/
 01_TIMIT_raw_dataset_whole/
-02_Buckeye/
+02_Buckeye_raw_dataset/
 datasets/
 data/
 outputs/
@@ -38,3 +38,61 @@ tensorboard/
 *.mp4
 *.png
 *.jpg
+
+# Ignore Git Commands and Server Commands files
+Git Commands
+Server Commands
+
+# Additional unnecessary files
+*.bak
+*.tmp
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+*.log
+*.out
+*.aux
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.blg
+*.bbl
+*.dvi
+*.xdv
+*.pdfsync
+*.nav
+*.snm
+*.vrb
+*.spl
+*.run.xml
+*.bcf
+*.pyc
+*.class
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.out
+*.a
+*.lib
+*.dylib
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.manifest
+*.res
+*.resources
+*.rc
+*.rct
+
+# Server log files
+*.log
+*.out
+logs/
+server_logs/
