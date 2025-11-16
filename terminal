@@ -1,0 +1,22 @@
+How to run Build_dataset_for_probe.py
+
+From your project root:
+
+# (optional) create folders if not already
+mkdir -p src configs 02_OUTPUTS logs
+
+# save the files above into the correct paths, then:
+python main.py --stage build_dataset --dataset TIMIT --dataset_path /path/to/TIMIT
+
+
+###INSTAL REQUIRED FILES ##########
+pip install -r requirements.txt
+
+
+
+########## COMAND TO RUN "bUILD DATASET FOR BUILDING PROBES" ############
+python main.py --stage build_dataset \
+  --dataset TIMIT \
+  --dataset_path 01_Raw_Phonetic_Annotated_Datasets/01_TIMIT_raw_dataset_whole \
+  --models wav2vec2_base \
+  --train_ratio 0.95

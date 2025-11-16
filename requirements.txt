@@ -1,0 +1,9 @@
+torch
+transformers
+librosa
+numpy>=1.21,<1.25
+soundfile
+pandas
+scikit-learn
+tqdm
+sphfile
