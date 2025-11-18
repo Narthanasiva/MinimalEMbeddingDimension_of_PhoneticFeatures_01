@@ -1,0 +1,14 @@
+########Python command to create dataset for probe for all models   ##########
+source venv/bin/activate
+python main.py --dataset ./01_Raw_Phonetic_Annotated_Datasets/01_TIMIT_raw_dataset_whole \
+               --model all \
+               --output ./02_OUTPUTS/TIMIT_Outputs
+
+
+########Python command to train probes ##########
+source venv/bin/activate
+python src/build_probe.py \
+  --dataset-root 02_OUTPUTS/TIMIT_Outputs \
+  --architecture mlp_1x200 \
+  --epochs 15 \
+  --batch-size 512
