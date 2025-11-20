@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phonetic Feature Probe Evaluation Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 1em;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+            color: #667eea;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .plot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+        }
+        
+        .plot-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .plot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .plot-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+        
+        .plot-card .plot-info {
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .plot-card .plot-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .plot-card .plot-meta {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .badge-model { background: #e7f5ff; color: #1864ab; }
+        .badge-feature { background: #fff3cd; color: #856404; }
+        .badge-arch { background: #d4edda; color: #155724; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal img {
+            max-width: 95%;
+            max-height: 95%;
+            border-radius: 10px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover {
+            color: #667eea;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .plot-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Phonetic Feature Probe Evaluation Dashboard</h1>
+            <p>Interactive visualization of probe performance across models, layers, and features</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Plots</h3>
+                <div class="value">72</div>
+            </div>
+            <div class="stat-card">
+                <h3>Models Evaluated</h3>
+                <div class="value">6</div>
+            </div>
+            <div class="stat-card">
+                <h3>Probe Architectures</h3>
+                <div class="value">2</div>
+            </div>
+            <div class="stat-card">
+                <h3>Features Probed</h3>
+                <div class="value">3</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>LINEAR - Avg Accuracy</h3>
+                <div class="value">0.911</div>
+            </div>
+            <div class="stat-card">
+                <h3>LINEAR - Avg F1 Score</h3>
+                <div class="value">0.742</div>
+            </div>
+
+            <div class="stat-card">
+                <h3>MLP_1X200 - Avg Accuracy</h3>
+                <div class="value">0.921</div>
+            </div>
+            <div class="stat-card">
+                <h3>MLP_1X200 - Avg F1 Score</h3>
+                <div class="value">0.786</div>
+            </div>
+
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('variant1')">📊 Features per Model</button>
+            <button class="tab" onclick="switchTab('variant2')">📈 Models per Feature</button>
+            <button class="tab" onclick="switchTab('variant3')">🔄 Architecture Comparison</button>
+            <button class="tab" onclick="switchTab('overview')">🗂️ Complete Overview</button>
+        </div>
+<div id="variant1" class="tab-content active"><h2 style="margin-bottom: 20px;">📊 All Features per Model per Architecture</h2><p style="margin-bottom: 20px; color: #6c757d;">Compare how different phonetic features (voiced, fricative, nasal) perform across layers for each model and architecture.</p><h3 style="margin: 30px 0 20px 0; color: #667eea;">📈 Accuracy</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_BASE.png" alt="HUBERT_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_LARGE.png" alt="HUBERT_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_BASE.png" alt="WAVLM_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_LARGE.png" alt="WAVLM_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_BASE.png" alt="HUBERT_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_LARGE.png" alt="HUBERT_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_BASE.png" alt="WAVLM_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_LARGE.png" alt="WAVLM_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div><h3 style="margin: 30px 0 20px 0; color: #667eea;">📈 F1 Score</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_BASE.png" alt="HUBERT_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_LARGE.png" alt="HUBERT_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_BASE.png" alt="WAVLM_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_LARGE.png" alt="WAVLM_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_BASE.png" alt="HUBERT_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_LARGE.png" alt="HUBERT_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_BASE.png" alt="WAVLM_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_LARGE.png" alt="WAVLM_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div></div><div id="variant2" class="tab-content"><h2 style="margin-bottom: 20px;">📈 All Models per Feature per Architecture</h2><p style="margin-bottom: 20px; color: #6c757d;">Compare how different models perform for each phonetic feature across layers.</p><h3 style="margin: 30px 0 20px 0; color: #667eea;">📊 Accuracy</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/voiced.png" alt="voiced - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/fricative.png" alt="fricative - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/nasal.png" alt="nasal - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/voiced.png" alt="voiced - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/fricative.png" alt="fricative - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/nasal.png" alt="nasal - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div><h3 style="margin: 30px 0 20px 0; color: #667eea;">📊 F1 Score</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/voiced.png" alt="voiced - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/fricative.png" alt="fricative - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/nasal.png" alt="nasal - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/voiced.png" alt="voiced - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/fricative.png" alt="fricative - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/nasal.png" alt="nasal - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div></div><div id="variant3" class="tab-content"><h2 style="margin-bottom: 20px;">🔄 Architecture Comparison per Model per Feature</h2><p style="margin-bottom: 20px; color: #6c757d;">Compare linear vs MLP probe architectures for each model-feature combination.</p><h3 style="margin: 30px 0 20px 0; color: #667eea;">🎯 Accuracy</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/voiced.png" alt="HUBERT_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/fricative.png" alt="HUBERT_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/nasal.png" alt="HUBERT_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/voiced.png" alt="HUBERT_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/fricative.png" alt="HUBERT_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/nasal.png" alt="HUBERT_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/voiced.png" alt="WAV2VEC2_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/fricative.png" alt="WAV2VEC2_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/nasal.png" alt="WAV2VEC2_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/voiced.png" alt="WAV2VEC2_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/fricative.png" alt="WAV2VEC2_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/nasal.png" alt="WAV2VEC2_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/voiced.png" alt="WAVLM_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/fricative.png" alt="WAVLM_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/nasal.png" alt="WAVLM_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/voiced.png" alt="WAVLM_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/fricative.png" alt="WAVLM_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/nasal.png" alt="WAVLM_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div><h3 style="margin: 30px 0 20px 0; color: #667eea;">🎯 F1 Score</h3><div class="plot-grid">
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/voiced.png" alt="HUBERT_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/fricative.png" alt="HUBERT_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/nasal.png" alt="HUBERT_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/voiced.png" alt="HUBERT_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/fricative.png" alt="HUBERT_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/nasal.png" alt="HUBERT_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/voiced.png" alt="WAV2VEC2_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/fricative.png" alt="WAV2VEC2_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/nasal.png" alt="WAV2VEC2_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/voiced.png" alt="WAV2VEC2_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/fricative.png" alt="WAV2VEC2_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/nasal.png" alt="WAV2VEC2_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/voiced.png" alt="WAVLM_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/fricative.png" alt="WAVLM_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/nasal.png" alt="WAVLM_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/voiced.png" alt="WAVLM_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/fricative.png" alt="WAVLM_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/nasal.png" alt="WAVLM_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                                <span class="badge badge-arch">Both Architectures</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div></div><div id="overview" class="tab-content"><h2 style="margin-bottom: 20px;">🗂️ Complete Overview - All 72 Plots</h2>
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Metric:</label>
+            <select onchange="filterPlots(this.value, 
+                document.getElementById('archFilter').value,
+                document.getElementById('modelFilter').value,
+                document.getElementById('featureFilter').value)">
+                <option value="all">All Metrics</option>
+                <option value="01_Accuracy">Accuracy</option>
+                <option value="02_F1_Score">F1 Score</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Architecture:</label>
+            <select id="archFilter" onchange="filterPlots(
+                document.querySelector('.filter-bar select').value,
+                this.value,
+                document.getElementById('modelFilter').value,
+                document.getElementById('featureFilter').value)">
+                <option value="all">All Architectures</option>
+                <option value="linear">Linear</option>
+                <option value="mlp_1x200">MLP 1x200</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Model:</label>
+            <select id="modelFilter" onchange="filterPlots(
+                document.querySelector('.filter-bar select').value,
+                document.getElementById('archFilter').value,
+                this.value,
+                document.getElementById('featureFilter').value)">
+                <option value="all">All Models</option>
+                <option value="HUBERT_BASE">HUBERT_BASE</option>
+                <option value="HUBERT_LARGE">HUBERT_LARGE</option>
+                <option value="WAV2VEC2_BASE">WAV2VEC2_BASE</option>
+                <option value="WAV2VEC2_LARGE">WAV2VEC2_LARGE</option>
+                <option value="WAVLM_BASE">WAVLM_BASE</option>
+                <option value="WAVLM_LARGE">WAVLM_LARGE</option>
+
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Feature:</label>
+            <select id="featureFilter" onchange="filterPlots(
+                document.querySelector('.filter-bar select').value,
+                document.getElementById('archFilter').value,
+                document.getElementById('modelFilter').value,
+                this.value)">
+                <option value="all">All Features</option>
+                <option value="voiced">Voiced</option>
+                <option value="fricative">Fricative</option>
+                <option value="nasal">Nasal</option>
+            </select>
+        </div>
+    </div>
+    <div class="plot-grid">
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="HUBERT_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_BASE.png" alt="HUBERT_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="HUBERT_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_LARGE.png" alt="HUBERT_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="WAV2VEC2_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="WAV2VEC2_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="WAVLM_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_BASE.png" alt="WAVLM_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="WAVLM_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_LARGE.png" alt="WAVLM_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="all" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/voiced.png" alt="voiced - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="all" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/fricative.png" alt="fricative - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="linear" 
+                         data-model="all" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/nasal.png" alt="nasal - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/linear/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="HUBERT_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_BASE.png" alt="HUBERT_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="HUBERT_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_LARGE.png" alt="HUBERT_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="WAV2VEC2_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="WAV2VEC2_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="WAVLM_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_BASE.png" alt="WAVLM_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="WAVLM_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_LARGE.png" alt="WAVLM_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/voiced.png" alt="voiced - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/fricative.png" alt="fricative - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/nasal.png" alt="nasal - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/mlp_1x200/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/voiced.png" alt="HUBERT_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/fricative.png" alt="HUBERT_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/nasal.png" alt="HUBERT_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/voiced.png" alt="HUBERT_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/fricative.png" alt="HUBERT_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/nasal.png" alt="HUBERT_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/HUBERT_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/voiced.png" alt="WAV2VEC2_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/fricative.png" alt="WAV2VEC2_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/nasal.png" alt="WAV2VEC2_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/voiced.png" alt="WAV2VEC2_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/fricative.png" alt="WAV2VEC2_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/nasal.png" alt="WAV2VEC2_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAV2VEC2_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/voiced.png" alt="WAVLM_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/fricative.png" alt="WAVLM_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/nasal.png" alt="WAVLM_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/voiced.png" alt="WAVLM_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/fricative.png" alt="WAVLM_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="01_Accuracy" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/nasal.png" alt="WAVLM_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/01_Accuracy/WAVLM_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="HUBERT_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_BASE.png" alt="HUBERT_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="HUBERT_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_LARGE.png" alt="HUBERT_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="WAV2VEC2_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="WAV2VEC2_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="WAVLM_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_BASE.png" alt="WAVLM_BASE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="WAVLM_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_LARGE.png" alt="WAVLM_LARGE - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="all" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/voiced.png" alt="voiced - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="all" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/fricative.png" alt="fricative - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="linear" 
+                         data-model="all" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/nasal.png" alt="nasal - linear" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/linear/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">linear</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="HUBERT_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_BASE.png" alt="HUBERT_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="HUBERT_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_LARGE.png" alt="HUBERT_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/HUBERT_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="WAV2VEC2_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_BASE.png" alt="WAV2VEC2_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="WAV2VEC2_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_LARGE.png" alt="WAV2VEC2_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAV2VEC2_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="WAVLM_BASE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_BASE.png" alt="WAVLM_BASE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_BASE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="WAVLM_LARGE" data-feature="all">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_LARGE.png" alt="WAVLM_LARGE - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/WAVLM_LARGE.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-feature">All Features</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/voiced.png" alt="voiced - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/fricative.png" alt="fricative - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="mlp_1x200" 
+                         data-model="all" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/nasal.png" alt="nasal - mlp_1x200" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/mlp_1x200/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-arch">mlp_1x200</span>
+                                <span class="badge badge-model">All Models</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/voiced.png" alt="HUBERT_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/fricative.png" alt="HUBERT_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/nasal.png" alt="HUBERT_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/voiced.png" alt="HUBERT_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/fricative.png" alt="HUBERT_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="HUBERT_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/nasal.png" alt="HUBERT_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/HUBERT_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">HUBERT_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">HUBERT_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/voiced.png" alt="WAV2VEC2_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/fricative.png" alt="WAV2VEC2_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/nasal.png" alt="WAV2VEC2_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/voiced.png" alt="WAV2VEC2_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/fricative.png" alt="WAV2VEC2_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAV2VEC2_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/nasal.png" alt="WAV2VEC2_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAV2VEC2_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAV2VEC2_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAV2VEC2_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/voiced.png" alt="WAVLM_BASE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/fricative.png" alt="WAVLM_BASE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_BASE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/nasal.png" alt="WAVLM_BASE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_BASE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_BASE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_BASE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="voiced">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/voiced.png" alt="WAVLM_LARGE - voiced" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/voiced.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Voiced</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">voiced</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="fricative">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/fricative.png" alt="WAVLM_LARGE - fricative" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/fricative.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Fricative</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">fricative</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-card" data-metric="02_F1_Score" data-architecture="both" 
+                         data-model="WAVLM_LARGE" data-feature="nasal">
+                        <img src="02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/nasal.png" alt="WAVLM_LARGE - nasal" onclick="openModal('02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/02_F1_Score/WAVLM_LARGE/nasal.png')">
+                        <div class="plot-info">
+                            <div class="plot-title">WAVLM_LARGE - Nasal</div>
+                            <div class="plot-meta">
+                                <span class="badge badge-model">WAVLM_LARGE</span>
+                                <span class="badge badge-feature">nasal</span>
+                            </div>
+                        </div>
+                    </div>
+                    </div></div>
+        <div class="footer">
+            Generated on 2025-11-19 20:34:30 | Total Probes: 684 | 
+            Models: HUBERT_BASE, HUBERT_LARGE, WAV2VEC2_BASE, WAV2VEC2_LARGE, WAVLM_BASE, WAVLM_LARGE
+        </div>
+    </div>
+    
+    <div class="modal" id="imageModal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img id="modalImage" src="" alt="Full size plot">
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function openModal(imgSrc) {
+            document.getElementById('imageModal').classList.add('active');
+            document.getElementById('modalImage').src = imgSrc;
+        }
+        
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+        
+        function filterPlots(metric, architecture, model, feature) {
+            const plots = document.querySelectorAll('.plot-card');
+            
+            plots.forEach(plot => {
+                const plotMetric = plot.dataset.metric;
+                const plotArch = plot.dataset.architecture;
+                const plotModel = plot.dataset.model;
+                const plotFeature = plot.dataset.feature;
+                
+                let show = true;
+                
+                if (metric !== 'all' && plotMetric !== metric) show = false;
+                if (architecture !== 'all' && plotArch !== architecture) show = false;
+                if (model !== 'all' && plotModel !== model) show = false;
+                if (feature !== 'all' && plotFeature !== feature) show = false;
+                
+                plot.style.display = show ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>

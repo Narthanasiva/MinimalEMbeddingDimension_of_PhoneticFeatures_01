@@ -1,0 +1,257 @@
+DIRECTORY STRUCTURE SUMMARY
+===========================
+
+Project Root: /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01/
+
+SOURCE CODE
+===========
+
+src/
+├── __init__.py
+├── build_dataset_for_probe.py          - Dataset preparation from model embeddings
+├── build_probe.py                      - Legacy probe training pipeline (JSON-based)
+├── compute.py                          - Computation utilities
+├── is_subset_existence.py              - Subset validation utilities
+├── utils.py                            - General helper functions
+├── plot_evaluation_results.py          - Generate 72 plots from evaluation JSONs
+└── create_dashboard.py                 - Generate interactive HTML dashboard
+
+configs/
+├── model_config.py                     - Model configuration and paths
+├── phoneme_features.py                 - Phonetic feature definitions (voiced, fricative, nasal)
+├── probe_models.py                     - Class-based probe definitions (LinearProbe, MLPProbe_1x200)
+├── probe_architectures.py              - JSON-based architecture loader (legacy)
+└── probe_architectures.json            - Architecture specifications (legacy)
+
+
+OUTPUTS
+=======
+
+02_OUTPUTS/TIMIT_Outputs/
+
+datasets/                               - Model layer embeddings
+├── HUBERT_BASE/
+│   ├── layer_00_train.pkl
+│   ├── layer_00_test.pkl
+│   └── ... (up to layer_12)
+├── HUBERT_LARGE/                       (layers 0-24)
+├── WAV2VEC2_BASE/                      (layers 0-12)
+├── WAV2VEC2_LARGE/                     (layers 0-24)
+├── WAVLM_BASE/                         (layers 0-12)
+└── WAVLM_LARGE/                        (layers 0-24)
+
+probes/
+├── linear/
+│   ├── linear_evaluation_summary.json  - 342 evaluation records (6 models × layers × 3 features)
+│   └── probes/                         - Individual trained probe files
+│       ├── HUBERT_BASE/
+│       │   ├── layer_00/
+│       │   │   ├── voiced.pt
+│       │   │   ├── fricative.pt
+│       │   │   └── nasal.pt
+│       │   └── ... (layers 1-12)
+│       └── ... (other models)
+│
+└── mlp_1x200/
+    ├── mlp_1x200_evaluation_summary.json  - 342 evaluation records
+    └── probes/                            - Individual trained probe files (same structure)
+
+plots/
+├── evaluation_dashboard.html           - ★ INTERACTIVE DASHBOARD (Open in browser)
+│
+└── 01_Evaluation_plots/
+    ├── 01_Accuracy/                    [36 PNG plots]
+    │   ├── linear/                     [15 plots]
+    │   │   ├── HUBERT_BASE.png         (Variant 1: All 3 features per model)
+    │   │   ├── HUBERT_LARGE.png
+    │   │   ├── WAV2VEC2_BASE.png
+    │   │   ├── WAV2VEC2_LARGE.png
+    │   │   ├── WAVLM_BASE.png
+    │   │   ├── WAVLM_LARGE.png
+    │   │   ├── voiced.png              (Variant 2: All 6 models per feature)
+    │   │   ├── fricative.png
+    │   │   └── nasal.png
+    │   │
+    │   ├── mlp_1x200/                  [15 plots - same structure as linear/]
+    │   │
+    │   ├── HUBERT_BASE/                [3 plots]
+    │   │   ├── voiced.png              (Variant 3: Both architectures comparison)
+    │   │   ├── fricative.png
+    │   │   └── nasal.png
+    │   ├── HUBERT_LARGE/               [3 plots]
+    │   ├── WAV2VEC2_BASE/              [3 plots]
+    │   ├── WAV2VEC2_LARGE/             [3 plots]
+    │   ├── WAVLM_BASE/                 [3 plots]
+    │   └── WAVLM_LARGE/                [3 plots]
+    │
+    └── 02_F1_Score/                    [36 PNG plots - same structure as 01_Accuracy/]
+
+
+SUMMARIES
+=========
+
+SUMMARY_FILES/
+├── plot_summary.txt                    - Plot generation statistics and structure
+└── EVALUATION_DASHBOARD_GUIDE.md       - Comprehensive dashboard usage guide
+
+
+CONFIGURATION & DATA
+====================
+
+01_Raw_Phonetic_Annotated_Datasets/
+├── 01_TIMIT_raw_dataset_sample/        - Sample TIMIT files
+├── 01_TIMIT_raw_dataset_whole/         - Complete TIMIT dataset
+└── 02_Buckeye_raw_dataset/             - Buckeye corpus
+
+examples/
+└── example_usage.py                    - Usage examples
+
+logs/                                   - Training and execution logs
+notebooks/                              - Jupyter notebooks (if any)
+
+
+ROOT FILES
+==========
+
+main.py                                 - Main entry point
+quick_start.py                          - Quick start script
+verify_setup.py                         - Setup verification
+requirements.txt                        - Python dependencies
+README.md                               - Project documentation
+train_class_probes.py                   - Class-based probe training script
+
+
+KEY FILES TO ACCESS
+===================
+
+1. Interactive Dashboard (★ PRIMARY VISUALIZATION):
+   /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01/02_OUTPUTS/TIMIT_Outputs/plots/evaluation_dashboard.html
+   
+   Open in browser for interactive exploration of all 72 plots with:
+   - Tab-based navigation (3 visualization variants + overview)
+   - Dynamic filtering (metric, architecture, model, feature)
+   - Click-to-enlarge functionality
+   - Performance statistics summary
+
+2. Evaluation Summaries (JSON):
+   /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01/02_OUTPUTS/TIMIT_Outputs/probes/linear/linear_evaluation_summary.json
+   /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01/02_OUTPUTS/TIMIT_Outputs/probes/mlp_1x200/mlp_1x200_evaluation_summary.json
+
+3. Static Plots (PNG):
+   /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01/02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/
+   
+   Browse by metric (01_Accuracy / 02_F1_Score) and variant
+
+
+QUICK ACCESS COMMANDS
+======================
+
+# Navigate to project root
+cd /home/narthana/MinimalEMbeddingDimension_of_PhoneticFeatures_01
+
+# Open dashboard in browser
+firefox 02_OUTPUTS/TIMIT_Outputs/plots/evaluation_dashboard.html &
+# or
+google-chrome 02_OUTPUTS/TIMIT_Outputs/plots/evaluation_dashboard.html &
+
+# Regenerate plots
+./venv/bin/python src/plot_evaluation_results.py
+
+# Regenerate dashboard
+./venv/bin/python src/create_dashboard.py
+
+# View plot directory structure
+find 02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots -name "*.png" | sort
+
+# Count files
+echo "Total plots: $(find 02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots -name '*.png' | wc -l)"
+
+
+STATISTICS
+==========
+
+Total Probes Trained:    684
+  - Linear:              342 (6 models × 57 layers × 3 features)
+  - MLP 1×200:           342 (6 models × 57 layers × 3 features)
+
+Total Plots Generated:   72
+  - Accuracy plots:      36
+  - F1 Score plots:      36
+
+Models:                  6
+  - Base models (13 layers):  HUBERT_BASE, WAV2VEC2_BASE, WAVLM_BASE
+  - Large models (25 layers): HUBERT_LARGE, WAV2VEC2_LARGE, WAVLM_LARGE
+
+Features:                3 (Voiced, Fricative, Nasal)
+Architectures:           2 (Linear, MLP 1×200)
+
+
+NOTES
+=====
+
+- All scripts are organized in src/ directory
+- All summary documentation in SUMMARY_FILES/ directory
+- Dashboard provides the best interactive exploration experience
+- JSON summaries contain complete metadata (hyperparameters, loss history, metrics)
+- PNG plots are high-resolution (150 DPI) for publication quality
+
+
+================================================================================
+★ NEW: CENTRALIZED OUTPUT PATH CONFIGURATION ★
+================================================================================
+
+PROBLEM SOLVED: No more confusion about where files are saved!
+
+All output paths are now centralized in:
+  configs/output_paths.py
+
+BENEFITS:
+  ✅ Single source of truth for all file paths
+  ✅ Consistent directory structure across all datasets
+  ✅ Easy to switch between TIMIT, BUCKEYE, or add new datasets
+  ✅ Automatic directory creation
+  ✅ Type-safe Path objects (not strings)
+  ✅ Discovery functions to find existing data
+
+USAGE:
+------
+from configs.output_paths import (
+    get_dataset_dir,          # Get dataset base directory
+    get_layer_file_path,      # Get embedding file path
+    get_probe_file_path,      # Get probe file path
+    get_dashboard_path,       # Get dashboard path
+    ensure_directory_exists   # Create directories automatically
+)
+
+# Example: Get paths for any dataset
+dataset_dir = get_dataset_dir("TIMIT")
+probe_path = get_probe_file_path("linear", "HUBERT_BASE", 5, "voiced", "TIMIT")
+dashboard = get_dashboard_path("TIMIT")
+
+# Switch to BUCKEYE? Just change the name!
+buckeye_dir = get_dataset_dir("BUCKEYE")
+buckeye_dashboard = get_dashboard_path("BUCKEYE")
+
+DOCUMENTATION:
+-------------
+  📖 Full Guide:         SUMMARY_FILES/OUTPUT_PATH_GUIDE.md
+  📋 Quick Reference:    SUMMARY_FILES/OUTPUT_PATHS_QUICK_REFERENCE.txt
+  💻 Working Examples:   examples/output_paths_usage.py
+  �� Source Code:        configs/output_paths.py
+
+TESTING:
+--------
+  # See the complete path structure:
+  python configs/output_paths.py
+
+  # Run usage examples:
+  python examples/output_paths_usage.py
+
+NOW YOU CAN:
+-----------
+  • Work with TIMIT without confusion ✓
+  • Add BUCKEYE dataset easily ✓
+  • Create new datasets with consistent structure ✓
+  • Know exactly where every file is saved ✓
+  • Never wonder "where did that file go?" ✓
+

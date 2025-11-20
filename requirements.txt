@@ -12,6 +12,7 @@ transformers>=4.30.0
 
 # Machine Learning
 scikit-learn>=1.0.0
+matplotlib>=3.5.0
 
 # Utilities
 tqdm>=4.62.0
