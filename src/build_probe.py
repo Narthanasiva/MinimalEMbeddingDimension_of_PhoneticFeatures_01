@@ -8,13 +8,16 @@ import argparse
 import json
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+import joblib
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.svm import LinearSVC, SVC
 from torch.utils.data import DataLoader, TensorDataset
 
 import matplotlib
@@ -25,9 +28,9 @@ import matplotlib.pyplot as plt
 from configs.phoneme_features import FEATURE_NAMES
 from configs.probe_architectures import (
 	ProbeArchitectureSpec,
+	create_spec_from_dict,
 	get_probe_architecture,
 	list_probe_architectures,
-	register_custom_architecture,
 )
 
 
@@ -66,30 +69,109 @@ def _find_dataset_dirs(root: Path) -> Dict[str, Path]:
 	return mapping
 
 
-def _load_architecture(architecture: str, custom_path: Optional[Path]) -> ProbeArchitectureSpec:
-	if custom_path is None:
-		return get_probe_architecture(architecture)
+def _spec_from_dict(config: Dict[str, Any], fallback_name: Optional[str] = None) -> ProbeArchitectureSpec:
+	return create_spec_from_dict(config, fallback_name=fallback_name)
 
-	with open(custom_path, "r", encoding="utf-8") as handle:
-		data = json.load(handle)
 
-	name = data.get("name", architecture or custom_path.stem)
-	hidden_dims = tuple(int(dim) for dim in data.get("hidden_dims", ()))
-	activation = data.get("activation", data.get("activations", "relu"))
-	dropout = data.get("dropout", 0.0)
-	if isinstance(dropout, list):
-		dropout = tuple(float(x) for x in dropout)
-	spec = ProbeArchitectureSpec(
-		name=name,
-		hidden_dims=hidden_dims,
-		activation=activation,
-		dropout=dropout,
-		bias=bool(data.get("bias", True)),
-		layer_norm=bool(data.get("layer_norm", False)),
-		batch_norm=bool(data.get("batch_norm", False)),
-	)
-	register_custom_architecture(spec)
-	return spec
+def _spec_from_file(path: Path, fallback_name: Optional[str] = None) -> ProbeArchitectureSpec:
+	with open(path, "r", encoding="utf-8") as handle:
+		config = json.load(handle)
+	return _spec_from_dict(config, fallback_name=fallback_name or path.stem)
+
+
+def _load_architectures_from_file(path: Path) -> List[ProbeArchitectureSpec]:
+	with open(path, "r", encoding="utf-8") as handle:
+		payload = json.load(handle)
+
+	if isinstance(payload, dict):
+		entries = payload.get("architectures") or payload.get("probes") or payload.get("items")
+		if entries is None:
+			raise ValueError(
+				f"Architecture file '{path}' must contain an 'architectures' list or be a list itself."
+			)
+	elif isinstance(payload, list):
+		entries = payload
+	else:
+		raise ValueError(f"Unsupported architecture file format for '{path}'.")
+
+	specs: List[ProbeArchitectureSpec] = []
+	for idx, entry in enumerate(entries):
+		if isinstance(entry, str):
+			specs.append(get_probe_architecture(entry))
+		elif isinstance(entry, dict):
+			fallback = f"{path.stem}_{idx}" if "name" not in entry else None
+			specs.append(_spec_from_dict(entry, fallback_name=fallback))
+		else:
+			raise ValueError(
+				f"Invalid architecture entry at index {idx} in '{path}'. Expected string or dict, got {type(entry).__name__}."
+			)
+
+	return specs
+
+
+def _resolve_architecture_specs(
+	architecture_names: Optional[Sequence[str]],
+	custom_arch_paths: Optional[Sequence[Path]],
+	architecture_file: Optional[Path],
+) -> List[ProbeArchitectureSpec]:
+	resolved: Dict[str, ProbeArchitectureSpec] = {}
+	selection_order: List[str] = []
+
+	if architecture_file is not None:
+		file_specs = _load_architectures_from_file(architecture_file)
+		for spec in file_specs:
+			resolved[spec.name] = spec
+		if not architecture_names:
+			selection_order.extend([spec.name for spec in file_specs])
+
+	if custom_arch_paths:
+		for path in custom_arch_paths:
+			spec = _spec_from_file(path)
+			resolved[spec.name] = spec
+			selection_order.append(spec.name)
+
+	names = list(architecture_names) if architecture_names else []
+	include_all = any(name.lower() == "all" for name in names)
+	if include_all:
+		names = sorted(list_probe_architectures())
+	else:
+		names = list(dict.fromkeys(names))
+
+	if names:
+		for name in names:
+			if name.lower() == "all":
+				continue
+			spec = get_probe_architecture(name)
+			resolved[spec.name] = spec
+			selection_order.append(spec.name)
+	elif not selection_order:
+		default_spec = get_probe_architecture("mlp_1x200")
+		resolved[default_spec.name] = default_spec
+		selection_order.append(default_spec.name)
+
+	unique_order = []
+	seen = set()
+	for name in selection_order:
+		if name not in resolved:
+			continue
+		if name not in seen:
+			unique_order.append(name)
+			seen.add(name)
+
+	if include_all:
+		for name in sorted(list_probe_architectures()):
+			if name not in seen:
+				unique_order.append(name)
+				seen.add(name)
+
+	if not unique_order:
+		raise ValueError("No probe architectures resolved. Provide --architecture, --architecture-file, or --custom-architecture.")
+
+	missing = [name for name in unique_order if name not in resolved]
+	if missing:
+		raise ValueError(f"Unknown architecture(s): {', '.join(missing)}")
+
+	return [resolved[name] for name in unique_order]
 
 
 def _stack_tensor(series: pd.Series) -> torch.Tensor:
@@ -139,58 +221,85 @@ def _train_probe(
 	batch_size: int,
 	lr: float,
 	num_workers: int,
-) -> Tuple[nn.Module, List[float]]:
-	model = spec.build(input_dim=x_train.shape[1], output_dim=1).to(device)
-	loader = _build_dataloader(x_train, y_train, batch_size, True, device.type == "cuda", num_workers)
-	criterion = nn.BCEWithLogitsLoss()
-	optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-	history: List[float] = []
+) -> Tuple[Any, List[float]]:
+	if spec.kind == "pytorch_mlp":
+		model = spec.build(input_dim=x_train.shape[1], output_dim=1).to(device)
+		loader = _build_dataloader(x_train, y_train, batch_size, True, device.type == "cuda", num_workers)
+		criterion = nn.BCEWithLogitsLoss()
+		optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+		history: List[float] = []
 
-	for _ in range(epochs):
-		running_loss = 0.0
-		sample_count = 0
-		model.train()
-		for xb, yb in loader:
-			xb = xb.to(device, non_blocking=True)
-			yb = yb.to(device, non_blocking=True)
-			optimizer.zero_grad()
-			logits = model(xb)
-			loss = criterion(logits, yb)
-			loss.backward()
-			optimizer.step()
-			running_loss += float(loss.item()) * xb.size(0)
-			sample_count += xb.size(0)
-		history.append(running_loss / max(sample_count, 1))
+		for _ in range(epochs):
+			running_loss = 0.0
+			sample_count = 0
+			model.train()
+			for xb, yb in loader:
+				xb = xb.to(device, non_blocking=True)
+				yb = yb.to(device, non_blocking=True)
+				optimizer.zero_grad()
+				logits = model(xb)
+				loss = criterion(logits, yb)
+				loss.backward()
+				optimizer.step()
+				running_loss += float(loss.item()) * xb.size(0)
+				sample_count += xb.size(0)
+			history.append(running_loss / max(sample_count, 1))
 
-	return model, history
+		return model, history
+
+	if spec.kind == "sklearn_linear_svc":
+		params = dict(spec.extra)
+		model = LinearSVC(**params)
+		x_np = x_train.cpu().numpy()
+		y_np = y_train.cpu().numpy().ravel().astype(int)
+		model.fit(x_np, y_np)
+		return model, []
+
+	if spec.kind == "sklearn_svc":
+		params = dict(spec.extra)
+		model = SVC(**params)
+		x_np = x_train.cpu().numpy()
+		y_np = y_train.cpu().numpy().ravel().astype(int)
+		model.fit(x_np, y_np)
+		return model, []
+
+	raise ValueError(f"Unsupported probe kind: {spec.kind}")
 
 
 def _evaluate_probe(
-	model: nn.Module,
+	spec: ProbeArchitectureSpec,
+	model: Any,
 	x_test: torch.Tensor,
 	y_test: torch.Tensor,
 	device: torch.device,
 	batch_size: int,
 	num_workers: int,
 ) -> Dict[str, float]:
-	loader = _build_dataloader(x_test, y_test, batch_size, False, device.type == "cuda", num_workers)
-	model.eval()
-	logits_list: List[torch.Tensor] = []
-	labels_list: List[torch.Tensor] = []
-	with torch.no_grad():
-		for xb, yb in loader:
-			xb = xb.to(device, non_blocking=True)
-			logits = model(xb)
-			logits_list.append(logits.cpu())
-			labels_list.append(yb.cpu())
+	if spec.kind == "pytorch_mlp":
+		loader = _build_dataloader(x_test, y_test, batch_size, False, device.type == "cuda", num_workers)
+		model.eval()
+		logits_list: List[torch.Tensor] = []
+		labels_list: List[torch.Tensor] = []
+		with torch.no_grad():
+			for xb, yb in loader:
+				xb = xb.to(device, non_blocking=True)
+				logits = model(xb)
+				logits_list.append(logits.cpu())
+				labels_list.append(yb.cpu())
 
-	logits_all = torch.cat(logits_list, dim=0)
-	labels_all = torch.cat(labels_list, dim=0)
-	probs = torch.sigmoid(logits_all)
-	preds = (probs >= 0.5).float()
+		logits_all = torch.cat(logits_list, dim=0)
+		labels_all = torch.cat(labels_list, dim=0)
+		probs = torch.sigmoid(logits_all)
+		preds = (probs >= 0.5).float()
 
-	y_true = labels_all.numpy().ravel()
-	y_pred = preds.numpy().ravel()
+		y_true = labels_all.numpy().ravel()
+		y_pred = preds.numpy().ravel()
+
+	else:
+		x_np = x_test.cpu().numpy()
+		y_true = y_test.cpu().numpy().ravel().astype(int)
+		pred_array = model.predict(x_np)
+		y_pred = np.asarray(pred_array, dtype=float)
 
 	accuracy = accuracy_score(y_true, y_pred)
 	precision = precision_score(y_true, y_pred, zero_division=0)
@@ -338,6 +447,7 @@ def run_probe_pipeline(
 				)
 
 				metrics = _evaluate_probe(
+					architecture_spec,
 					model,
 					x_test,
 					y_test,
@@ -347,15 +457,21 @@ def run_probe_pipeline(
 				)
 
 				layer_dir = _ensure_dir(model_probe_dir / f"layer_{layer:02d}")
-				model_path = layer_dir / f"{feature}.pt"
-				model_cpu = model.cpu()
-				torch.save(model_cpu.state_dict(), model_path)
-				del model
-				if device.type == "cuda":
-					torch.cuda.empty_cache()
+				if architecture_spec.kind == "pytorch_mlp":
+					model_path = layer_dir / f"{feature}.pt"
+					model_cpu = model.cpu()
+					torch.save(model_cpu.state_dict(), model_path)
+					del model
+					if device.type == "cuda":
+						torch.cuda.empty_cache()
+				else:
+					model_path = layer_dir / f"{feature}.joblib"
+					joblib.dump(model, model_path)
 
 				metadata = {
 					"architecture": architecture_spec.name,
+					"architecture_kind": architecture_spec.kind,
+					"architecture_params": architecture_spec.extra,
 					"model_dataset": model_label,
 					"layer": layer,
 					"feature": feature,
@@ -376,6 +492,7 @@ def run_probe_pipeline(
 
 				record = {
 					"architecture": architecture_spec.name,
+					"architecture_kind": architecture_spec.kind,
 					"model_key": key,
 					"model_label": model_label,
 					"layer": layer,
@@ -488,14 +605,26 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 	parser.add_argument(
 		"--architecture",
 		type=str,
-		default="mlp_1x200",
-		help=f"Probe architecture identifier. Available: {', '.join(list_probe_architectures())}",
+		nargs="+",
+		default=None,
+		help=(
+			"Probe architecture name(s) to run. Use 'all' to iterate through every registered architecture. "
+			"Omit to use the default (mlp_1x200). "
+			f"Available: {', '.join(list_probe_architectures())}"
+		),
+	)
+	parser.add_argument(
+		"--architectures-file",
+		type=Path,
+		default=None,
+		help="JSON file listing architectures to load/run (names or inline definitions with a 'type' field).",
 	)
 	parser.add_argument(
 		"--custom-architecture",
 		type=Path,
+		nargs="*",
 		default=None,
-		help="Path to JSON spec defining a custom probe architecture",
+		help="Additional JSON files defining custom probe architectures",
 	)
 	parser.add_argument(
 		"--features",
@@ -535,29 +664,42 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 def main(argv: Optional[Sequence[str]] = None) -> None:
 	args = _parse_args(argv)
 
-	architecture_spec = _load_architecture(args.architecture, args.custom_architecture)
+	custom_paths = args.custom_architecture or []
+	architecture_specs = _resolve_architecture_specs(
+		architecture_names=args.architecture,
+		custom_arch_paths=custom_paths,
+		architecture_file=args.architectures_file,
+	)
 
 	probes_root = args.probes_output_root or args.dataset_root
 	evaluation_root = args.eval_output_root or args.dataset_root
 
-	records = run_probe_pipeline(
-		dataset_root=args.dataset_root,
-		architecture_spec=architecture_spec,
-		model_names=args.models,
-		features=args.features,
-		epochs=args.epochs,
-		batch_size=args.batch_size,
-		lr=args.lr,
-		device_name=args.device,
-		num_workers=args.num_workers,
-		probes_output_root=probes_root,
-		eval_output_root=evaluation_root,
-		quiet=args.quiet,
-		seed=args.seed,
-	)
+	total_records = 0
+	for spec in architecture_specs:
+		if not args.quiet and len(architecture_specs) > 1:
+			print(f"\n=== Architecture: {spec.name} ===")
+		records = run_probe_pipeline(
+			dataset_root=args.dataset_root,
+			architecture_spec=spec,
+			model_names=args.models,
+			features=args.features,
+			epochs=args.epochs,
+			batch_size=args.batch_size,
+			lr=args.lr,
+			device_name=args.device,
+			num_workers=args.num_workers,
+			probes_output_root=probes_root,
+			eval_output_root=evaluation_root,
+			quiet=args.quiet,
+			seed=args.seed,
+		)
+		total_records += len(records)
 
 	if not args.quiet:
-		print(f"\nSaved trained probes for {len(records)} feature-layer combinations.")
+		print(
+			f"\nSaved trained probes for {total_records} feature-layer combinations "
+			f"across {len(architecture_specs)} architecture(s)."
+		)
 
 
 if __name__ == "__main__":

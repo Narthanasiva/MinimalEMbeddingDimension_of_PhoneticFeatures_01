@@ -1,0 +1,122 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    OUTPUT PATHS QUICK REFERENCE                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📦 IMPORT
+─────────
+from configs.output_paths import (
+    get_dataset_dir, get_layer_file_path, get_probe_file_path,
+    get_dashboard_path, ensure_directory_exists
+)
+
+📁 DATASET EMBEDDINGS
+─────────────────────
+# Get dataset directory
+dir = get_dataset_dir("TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/datasets
+
+# Get model directory  
+dir = get_model_dataset_dir("HUBERT_BASE", "TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/datasets/HUBERT_BASE/
+
+# Get layer file path
+path = get_layer_file_path("HUBERT_BASE", 5, "train", "TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/datasets/HUBERT_BASE/layer_05_train.pkl
+
+📊 PROBE FILES
+──────────────
+# Get probe architecture directory
+dir = get_probe_architecture_dir("linear", "TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/probes/linear/
+
+# Get specific probe file
+path = get_probe_file_path("linear", "HUBERT_BASE", 5, "voiced", "TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/probes/linear/probes/HUBERT_BASE/layer_05/voiced.pt
+
+# Get evaluation summary
+path = get_probe_evaluation_summary_path("linear", "TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/probes/linear/linear_evaluation_summary.json
+
+📈 VISUALIZATIONS
+─────────────────
+# Get plots directory
+dir = get_evaluation_plots_dir("TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/
+
+# Get dashboard path
+path = get_dashboard_path("TIMIT")
+# → 02_OUTPUTS/TIMIT_Outputs/plots/evaluation_dashboard.html
+
+🛠️ UTILITIES
+─────────────
+# Create directory if doesn't exist
+dir = ensure_directory_exists(path.parent)
+
+# Find all models
+models = get_all_model_names("TIMIT")
+# → ['HUBERT_BASE', 'HUBERT_LARGE', ...]
+
+# Find all architectures
+archs = get_all_architecture_names("TIMIT")
+# → ['linear', 'mlp_1x200']
+
+# Print full structure
+print_path_structure("TIMIT")
+
+🌟 COMPLETE EXAMPLE
+───────────────────
+from configs.output_paths import *
+
+# 1. Save embeddings
+for layer in range(13):
+    train_path = get_layer_file_path("HUBERT_BASE", layer, "train", "TIMIT")
+    test_path = get_layer_file_path("HUBERT_BASE", layer, "test", "TIMIT")
+    ensure_directory_exists(train_path.parent)
+    # Save your data to train_path and test_path
+
+# 2. Train probes
+for feature in ["voiced", "fricative", "nasal"]:
+    probe_path = get_probe_file_path("linear", "HUBERT_BASE", 5, feature, "TIMIT")
+    ensure_directory_exists(probe_path.parent)
+    # Save trained probe to probe_path
+
+# 3. Save evaluation
+summary_path = get_probe_evaluation_summary_path("linear", "TIMIT")
+# Save evaluation results to summary_path
+
+# 4. Generate dashboard
+dashboard_path = get_dashboard_path("TIMIT")
+# Create and save dashboard to dashboard_path
+
+🎯 NEW DATASET
+──────────────
+# Just change the dataset name - paths adapt automatically!
+
+buckeye_dir = get_dataset_dir("BUCKEYE")
+# → 02_OUTPUTS/Buckeye_Outputs/datasets
+
+buckeye_probes = get_probe_base_dir("BUCKEYE")
+# → 02_OUTPUTS/Buckeye_Outputs/probes
+
+buckeye_dashboard = get_dashboard_path("BUCKEYE")
+# → 02_OUTPUTS/Buckeye_Outputs/plots/evaluation_dashboard.html
+
+📖 DOCUMENTATION
+────────────────
+• Full Guide:    SUMMARY_FILES/OUTPUT_PATH_GUIDE.md
+• Source Code:   configs/output_paths.py
+• Examples:      examples/output_paths_usage.py
+
+✅ BENEFITS
+───────────
+✓ No more path confusion
+✓ Consistent structure across datasets
+✓ Easy to switch datasets
+✓ Automatic directory creation
+✓ Type-safe Path objects
+✓ Discovery of existing data
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  Run: python configs/output_paths.py                                         ║
+║  See: python examples/output_paths_usage.py                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝

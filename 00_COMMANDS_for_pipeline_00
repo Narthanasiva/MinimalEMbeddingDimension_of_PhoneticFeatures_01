@@ -7,8 +7,4 @@ python main.py --dataset ./01_Raw_Phonetic_Annotated_Datasets/01_TIMIT_raw_datas
 
 ########Python command to train probes ##########
 source venv/bin/activate
-python src/build_probe.py \
-  --dataset-root 02_OUTPUTS/TIMIT_Outputs \
-  --architecture mlp_1x200 \
-  --epochs 15 \
-  --batch-size 512
+python src/build_probe.py --dataset-root 02_OUTPUTS/TIMIT_Outputs/probes --architectures-file configs/architecture_collections/basics.json

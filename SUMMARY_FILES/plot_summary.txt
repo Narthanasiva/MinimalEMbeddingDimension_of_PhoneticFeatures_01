@@ -1,0 +1,75 @@
+EVALUATION PLOTS GENERATION SUMMARY
+====================================
+
+Total Plots Generated: 72 (36 Accuracy + 36 F1 Score)
+
+DIRECTORY STRUCTURE:
+====================
+
+02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots/
+├── 01_Accuracy/
+│   ├── linear/                      [15 plots]
+│   │   ├── HUBERT_BASE.png          (Variant 1: All 3 features for this model)
+│   │   ├── HUBERT_LARGE.png
+│   │   ├── WAV2VEC2_BASE.png
+│   │   ├── WAV2VEC2_LARGE.png
+│   │   ├── WAVLM_BASE.png
+│   │   ├── WAVLM_LARGE.png
+│   │   ├── voiced.png               (Variant 2: All 6 models for this feature)
+│   │   ├── fricative.png
+│   │   └── nasal.png
+│   ├── mlp_1x200/                   [15 plots - same structure as linear/]
+│   ├── HUBERT_BASE/                 [3 plots]
+│   │   ├── voiced.png               (Variant 3: Both architectures for this combo)
+│   │   ├── fricative.png
+│   │   └── nasal.png
+│   ├── HUBERT_LARGE/                [3 plots]
+│   ├── WAV2VEC2_BASE/               [3 plots]
+│   ├── WAV2VEC2_LARGE/              [3 plots]
+│   ├── WAVLM_BASE/                  [3 plots]
+│   └── WAVLM_LARGE/                 [3 plots]
+│
+└── 02_F1_Score/                     [Same structure as 01_Accuracy/]
+
+
+PLOT VARIANTS BREAKDOWN:
+=========================
+
+Variant 1: Features per Model per Architecture
+  - All 3 features on same graph
+  - Per model, per architecture
+  - Count: 2 architectures × 6 models = 12 plots per metric
+  - Location: {metric}/{architecture}/{model}.png
+
+Variant 2: Models per Feature per Architecture  
+  - All 6 models on same graph
+  - Per feature, per architecture
+  - Count: 2 architectures × 3 features = 6 plots per metric
+  - Location: {metric}/{architecture}/{feature}.png
+
+Variant 3: Architectures per Model per Feature
+  - Both architectures on same graph
+  - Per model, per feature
+  - Count: 6 models × 3 features = 18 plots per metric
+  - Location: {metric}/{model}/{feature}.png
+
+
+DATA SOURCE:
+============
+- linear_evaluation_summary.json: 342 records
+- mlp_1x200_evaluation_summary.json: 342 records
+
+Total probe evaluations: 684 (6 models × layers × 3 features × 2 architectures)
+
+
+PLOT CHARACTERISTICS:
+=====================
+- X-axis: Layer number (0 to 12 for base models, 0 to 24 for large models)
+- Y-axis: Metric value (Accuracy or F1 Score, range 0-1)
+- Format: PNG images at 150 DPI
+- Size: 10" × 6" per plot
+- Grid: Enabled with 0.3 alpha transparency
+- Markers: Circular points at each layer
+- Line width: 2.0
+- Marker size: 5.0
+
