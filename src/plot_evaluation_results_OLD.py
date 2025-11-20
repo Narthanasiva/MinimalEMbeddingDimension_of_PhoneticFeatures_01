@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 """
-Generate evaluation plots in organized structure.
+Generate evaluation plots from probe evaluation summary JSON files.
 
-Directory Structure:
-01_Evaluation_plots/
-├── 01_Accuracy/
-│   ├── 01_Between_Features_in_same_plots/{linear,mlp_1x200}/
-│   │   └── {MODEL}_{ARCH}_Accuracy_across_Features.png (12 plots)
-│   ├── 02_Between_models_in_same_plots/{linear,mlp_1x200}/
-│   │   └── {FEATURE}_{ARCH}_Accuracy_across_models.png (6 plots)
-│   └── 03_Between_Architectures_in_same_plots/{MODEL}/
-│       └── {FEATURE}_{MODEL}_Accuracy_across_architectures.png (18 plots)
-└── 02_F1_Score/ (same structure - 36 plots)
+Creates three variants of line charts for accuracy and F1 scores:
+1. All features per model per architecture (12 plots per metric)
+2. All models per feature per architecture (6 plots per metric)
+3. Both architectures per model per feature (18 plots per metric)
 
-Total: 72 plots (36 per metric)
+Total: 72 plots (36 accuracy + 36 F1)
 """
 
 import json
+import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Configuration
@@ -29,28 +25,28 @@ SUMMARY_DIR = Path("02_OUTPUTS/TIMIT_Outputs/probes")
 OUTPUT_BASE = Path("02_OUTPUTS/TIMIT_Outputs/plots/01_Evaluation_plots")
 ARCHITECTURES = ["linear", "mlp_1x200"]
 FEATURES = ["voiced", "fricative", "nasal"]
-MODELS = ["WAVLM_BASE", "WAVLM_LARGE", "HUBERT_BASE", "HUBERT_LARGE", "WAV2VEC2_BASE", "WAV2VEC2_LARGE"]
+MODELS = ["HUBERT_BASE", "HUBERT_LARGE", "WAV2VEC2_BASE", "WAV2VEC2_LARGE", "WAVLM_BASE", "WAVLM_LARGE"]
 
 # Color schemes
 FEATURE_COLORS = {"voiced": "#1f77b4", "fricative": "#ff7f0e", "nasal": "#2ca02c"}
 MODEL_COLORS = {
-    "WAVLM_BASE": "#1f77b4",
-    "WAVLM_LARGE": "#ff7f0e", 
-    "HUBERT_BASE": "#2ca02c",
-    "HUBERT_LARGE": "#d62728",
-    "WAV2VEC2_BASE": "#9467bd",
-    "WAV2VEC2_LARGE": "#8c564b"
+    "HUBERT_BASE": "#1f77b4",
+    "HUBERT_LARGE": "#ff7f0e", 
+    "WAV2VEC2_BASE": "#2ca02c",
+    "WAV2VEC2_LARGE": "#d62728",
+    "WAVLM_BASE": "#9467bd",
+    "WAVLM_LARGE": "#8c564b"
 }
 ARCH_COLORS = {"linear": "#1f77b4", "mlp_1x200": "#ff7f0e"}
 
 # Line styles
 MODEL_STYLES = {
-    "WAVLM_BASE": "-",
-    "WAVLM_LARGE": "--",
     "HUBERT_BASE": "-",
     "HUBERT_LARGE": "--",
     "WAV2VEC2_BASE": "-",
-    "WAV2VEC2_LARGE": "--"
+    "WAV2VEC2_LARGE": "--",
+    "WAVLM_BASE": "-",
+    "WAVLM_LARGE": "--"
 }
 
 
@@ -64,13 +60,15 @@ def load_evaluation_summary(architecture: str) -> List[Dict]:
     with open(summary_path, 'r') as f:
         data = json.load(f)
     
-    print(f"  Loaded {len(data)} records from {architecture}")
+    print(f"Loaded {len(data)} records from {summary_path}")
     return data
 
 
-def organize_data(data: List[Dict]) -> Dict:
+def organize_data_by_architecture(data: List[Dict]) -> Dict:
     """
-    Organize data: {model: {layer: {feature: {accuracy, f1_score}}}}
+    Organize evaluation data by model, layer, and feature.
+    
+    Returns nested dict: {model: {layer: {feature: {accuracy, f1_score}}}}
     """
     organized = {}
     
@@ -86,51 +84,31 @@ def organize_data(data: List[Dict]) -> Dict:
         
         organized[model][layer][feature] = {
             "accuracy": record["metrics"]["accuracy"],
-            "f1": record["metrics"]["f1"]
+            "f1_score": record["metrics"]["f1"]
         }
     
     return organized
 
 
-def create_directories():
-    """Create the complete directory structure."""
-    print("\n[1/5] Creating directory structure...")
-    
-    for metric in ["01_Accuracy", "02_F1_Score"]:
-        # Variant 1: Between Features
-        for arch in ARCHITECTURES:
-            (OUTPUT_BASE / metric / "01_Between_Features_in_same_plots" / arch).mkdir(parents=True, exist_ok=True)
-        
-        # Variant 2: Between Models
-        for arch in ARCHITECTURES:
-            (OUTPUT_BASE / metric / "02_Between_models_in_same_plots" / arch).mkdir(parents=True, exist_ok=True)
-        
-        # Variant 3: Between Architectures
-        for model in MODELS:
-            (OUTPUT_BASE / metric / "03_Between_Architectures_in_same_plots" / model).mkdir(parents=True, exist_ok=True)
-    
-    print("  ✓ Directory structure created")
-
-
-def plot_variant1_features(all_data: Dict[str, Dict], metric: str):
+def plot_variant1_features_per_model_per_arch(all_data: Dict[str, Dict], output_dir: Path, metric: str):
     """
-    Variant 1: All features (3 lines) on same plot per model per architecture.
-    Output: {metric}/01_Between_Features_in_same_plots/{arch}/{model}_{arch}_{metric}_across_Features.png
-    Creates: 2 arch × 6 models = 12 plots per metric
+    Variant 1: Plot all features (3 lines) for each model+architecture combination.
+    
+    Creates: 2 architectures × 6 models = 12 plots per metric
+    Saves to: {metric_name}/{architecture}/{model_name}.png
     """
-    metric_key = "accuracy" if metric == "01_Accuracy" else "f1"
+    metric_key = "accuracy" if metric == "01_Accuracy" else "f1_score"
     metric_label = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
-    metric_short = "Accuracy" if metric == "01_Accuracy" else "F1Score"
-    
-    print(f"\n[2/5] Variant 1: Features comparison (12 plots for {metric_label})...")
     
     for architecture in ARCHITECTURES:
+        arch_dir = output_dir / metric / architecture
+        arch_dir.mkdir(parents=True, exist_ok=True)
+        
         data = all_data[architecture]
-        output_dir = OUTPUT_BASE / metric / "01_Between_Features_in_same_plots" / architecture
         
         for model in MODELS:
             if model not in data:
-                print(f"  Warning: {model} not in {architecture} data")
+                print(f"Warning: {model} not found in {architecture} data")
                 continue
             
             plt.figure(figsize=(10, 6))
@@ -145,6 +123,7 @@ def plot_variant1_features(all_data: Dict[str, Dict], metric: str):
                     else:
                         scores.append(None)
                 
+                # Filter out None values
                 valid_layers = [l for l, s in zip(layers, scores) if s is not None]
                 valid_scores = [s for s in scores if s is not None]
                 
@@ -155,35 +134,33 @@ def plot_variant1_features(all_data: Dict[str, Dict], metric: str):
             
             plt.xlabel("Layer", fontsize=12)
             plt.ylabel(metric_label, fontsize=12)
-            plt.title(f"{metric_label} across Layers - {model} ({architecture})", 
-                     fontsize=14, fontweight='bold')
+            plt.title(f"{metric_label} vs Layer - {model} ({architecture})", fontsize=14, fontweight='bold')
             plt.legend(loc='best', fontsize=10)
             plt.grid(True, alpha=0.3)
             plt.tight_layout()
             
-            filename = f"{model}_{architecture}_{metric_short}_across_Features.png"
-            output_path = output_dir / filename
+            output_path = arch_dir / f"{model}.png"
             plt.savefig(output_path, dpi=150, bbox_inches='tight')
             plt.close()
             
-            print(f"  ✓ {architecture}/{filename}")
+            print(f"  Created: {output_path}")
 
 
-def plot_variant2_models(all_data: Dict[str, Dict], metric: str):
+def plot_variant2_models_per_feature_per_arch(all_data: Dict[str, Dict], output_dir: Path, metric: str):
     """
-    Variant 2: All models (6 lines) on same plot per feature per architecture.
-    Output: {metric}/02_Between_models_in_same_plots/{arch}/{feature}_{arch}_{metric}_across_models.png
-    Creates: 2 arch × 3 features = 6 plots per metric
-    """
-    metric_key = "accuracy" if metric == "01_Accuracy" else "f1"
-    metric_label = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
-    metric_short = "Accuracy" if metric == "01_Accuracy" else "F1Score"
+    Variant 2: Plot all models (6 lines) for each feature+architecture combination.
     
-    print(f"\n[3/5] Variant 2: Models comparison (6 plots for {metric_label})...")
+    Creates: 2 architectures × 3 features = 6 plots per metric
+    Saves to: {metric_name}/{architecture}/{feature}.png
+    """
+    metric_key = "accuracy" if metric == "01_Accuracy" else "f1_score"
+    metric_label = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
     
     for architecture in ARCHITECTURES:
+        arch_dir = output_dir / metric / architecture
+        arch_dir.mkdir(parents=True, exist_ok=True)
+        
         data = all_data[architecture]
-        output_dir = OUTPUT_BASE / metric / "02_Between_models_in_same_plots" / architecture
         
         for feature in FEATURES:
             plt.figure(figsize=(10, 6))
@@ -212,34 +189,32 @@ def plot_variant2_models(all_data: Dict[str, Dict], metric: str):
             
             plt.xlabel("Layer", fontsize=12)
             plt.ylabel(metric_label, fontsize=12)
-            plt.title(f"{metric_label} across Layers - {feature.capitalize()} ({architecture})", 
+            plt.title(f"{metric_label} vs Layer - {feature.capitalize()} ({architecture})", 
                      fontsize=14, fontweight='bold')
             plt.legend(loc='best', fontsize=9, ncol=2)
             plt.grid(True, alpha=0.3)
             plt.tight_layout()
             
-            filename = f"{feature}_{architecture}_{metric_short}_across_models.png"
-            output_path = output_dir / filename
+            output_path = arch_dir / f"{feature}.png"
             plt.savefig(output_path, dpi=150, bbox_inches='tight')
             plt.close()
             
-            print(f"  ✓ {architecture}/{filename}")
+            print(f"  Created: {output_path}")
 
 
-def plot_variant3_architectures(all_data: Dict[str, Dict], metric: str):
+def plot_variant3_archs_per_model_per_feature(all_data: Dict[str, Dict], output_dir: Path, metric: str):
     """
-    Variant 3: Both architectures (2 lines) on same plot per model per feature.
-    Output: {metric}/03_Between_Architectures_in_same_plots/{model}/{feature}_{model}_{metric}_across_architectures.png
-    Creates: 6 models × 3 features = 18 plots per metric
-    """
-    metric_key = "accuracy" if metric == "01_Accuracy" else "f1"
-    metric_label = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
-    metric_short = "Accuracy" if metric == "01_Accuracy" else "F1Score"
+    Variant 3: Plot both architectures (2 lines) for each model+feature combination.
     
-    print(f"\n[4/5] Variant 3: Architectures comparison (18 plots for {metric_label})...")
+    Creates: 6 models × 3 features = 18 plots per metric
+    Saves to: {metric_name}/{model_name}/{feature}.png
+    """
+    metric_key = "accuracy" if metric == "01_Accuracy" else "f1_score"
+    metric_label = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
     
     for model in MODELS:
-        output_dir = OUTPUT_BASE / metric / "03_Between_Architectures_in_same_plots" / model
+        model_dir = output_dir / metric / model
+        model_dir.mkdir(parents=True, exist_ok=True)
         
         for feature in FEATURES:
             plt.figure(figsize=(10, 6))
@@ -248,7 +223,7 @@ def plot_variant3_architectures(all_data: Dict[str, Dict], metric: str):
                 data = all_data[architecture]
                 
                 if model not in data:
-                    print(f"  Warning: {model} not in {architecture} data")
+                    print(f"Warning: {model} not found in {architecture} data")
                     continue
                 
                 layers = sorted(data[model].keys())
@@ -271,68 +246,69 @@ def plot_variant3_architectures(all_data: Dict[str, Dict], metric: str):
             
             plt.xlabel("Layer", fontsize=12)
             plt.ylabel(metric_label, fontsize=12)
-            plt.title(f"{metric_label} across Layers - {model} ({feature.capitalize()})",
+            plt.title(f"{metric_label} vs Layer - {model} ({feature.capitalize()})",
                      fontsize=14, fontweight='bold')
             plt.legend(loc='best', fontsize=10)
             plt.grid(True, alpha=0.3)
             plt.tight_layout()
             
-            filename = f"{feature}_{model}_{metric_short}_across_architectures.png"
-            output_path = output_dir / filename
+            output_path = model_dir / f"{feature}.png"
             plt.savefig(output_path, dpi=150, bbox_inches='tight')
             plt.close()
             
-            print(f"  ✓ {model}/{filename}")
+            print(f"  Created: {output_path}")
 
 
 def main():
-    """Generate all evaluation plots in organized structure."""
-    print("=" * 80)
-    print(" EVALUATION PLOTTING - ORGANIZED STRUCTURE")
-    print("=" * 80)
+    """Generate all evaluation plots."""
+    print("=" * 70)
+    print("EVALUATION PLOTTING SCRIPT")
+    print("=" * 70)
     
-    # Create directory structure
-    create_directories()
-    
-    # Load data
-    print("\n[1/5] Loading evaluation summaries...")
+    # Load data for all architectures
+    print("\n[1/4] Loading evaluation summaries...")
     all_data = {}
     for architecture in ARCHITECTURES:
         try:
             raw_data = load_evaluation_summary(architecture)
-            all_data[architecture] = organize_data(raw_data)
+            all_data[architecture] = organize_data_by_architecture(raw_data)
         except FileNotFoundError as e:
-            print(f"  Error: {e}")
+            print(f"Error: {e}")
             return
     
     # Generate plots for both metrics
-    for metric in ["01_Accuracy", "02_F1_Score"]:
-        metric_name = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
-        print(f"\n{'=' * 80}")
-        print(f" {metric_name.upper()} PLOTS")
-        print(f"{'=' * 80}")
-        
-        plot_variant1_features(all_data, metric)
-        plot_variant2_models(all_data, metric)
-        plot_variant3_architectures(all_data, metric)
+    metrics = ["01_Accuracy", "02_F1_Score"]
     
-    # Summary
-    print("\n" + "=" * 80)
-    print(" PLOTTING COMPLETE")
-    print("=" * 80)
-    print(f"\nTotal plots generated: 72")
-    print(f"  - Variant 1 (Features): 24 plots (2 arch × 6 models × 2 metrics)")
-    print(f"  - Variant 2 (Models):    12 plots (2 arch × 3 features × 2 metrics)")
-    print(f"  - Variant 3 (Arch):      36 plots (6 models × 3 features × 2 metrics)")
-    print(f"\nOutput location: {OUTPUT_BASE}")
-    print("\nStructure:")
+    for metric in metrics:
+        metric_name = "Accuracy" if metric == "01_Accuracy" else "F1 Score"
+        print(f"\n{'=' * 70}")
+        print(f"Generating {metric_name} Plots")
+        print(f"{'=' * 70}")
+        
+        # Variant 1: Features per model per architecture
+        print(f"\n[2/4] Variant 1: All features per model per architecture (12 plots)...")
+        plot_variant1_features_per_model_per_arch(all_data, OUTPUT_BASE, metric)
+        
+        # Variant 2: Models per feature per architecture
+        print(f"\n[3/4] Variant 2: All models per feature per architecture (6 plots)...")
+        plot_variant2_models_per_feature_per_arch(all_data, OUTPUT_BASE, metric)
+        
+        # Variant 3: Architectures per model per feature
+        print(f"\n[4/4] Variant 3: Both architectures per model per feature (18 plots)...")
+        plot_variant3_archs_per_model_per_feature(all_data, OUTPUT_BASE, metric)
+    
+    print("\n" + "=" * 70)
+    print("PLOTTING COMPLETE")
+    print("=" * 70)
+    print(f"\nTotal plots generated: 72 (36 Accuracy + 36 F1 Score)")
+    print(f"Output directory: {OUTPUT_BASE}")
+    print("\nDirectory structure:")
     print("  01_Accuracy/")
-    print("    01_Between_Features_in_same_plots/{linear,mlp_1x200}/")
-    print("    02_Between_models_in_same_plots/{linear,mlp_1x200}/")
-    print("    03_Between_Architectures_in_same_plots/{6 model folders}/")
+    print("    linear/          - 12 model plots + 3 feature plots")
+    print("    mlp_1x200/       - 12 model plots + 3 feature plots")
+    print("    {MODEL}/         - 3 feature plots (18 total)")
     print("  02_F1_Score/")
-    print("    [Same structure]")
-    print("=" * 80)
+    print("    [same structure as Accuracy]")
 
 
 if __name__ == "__main__":
