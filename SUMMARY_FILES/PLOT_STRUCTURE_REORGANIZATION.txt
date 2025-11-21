@@ -1,0 +1,146 @@
+================================================================================
+EVALUATION PLOT STRUCTURE REORGANIZATION
+================================================================================
+Date: November 20, 2025
+
+OVERVIEW:
+Reorganized all 72 evaluation plots into a clear, hierarchical structure with
+descriptive folder and file names for better research workflow.
+
+================================================================================
+CHANGES MADE:
+================================================================================
+
+1. UPDATED SCRIPT:
+   - File: src/plot_evaluation_results.py
+   - Complete rewrite to generate plots in organized structure
+   - Descriptive filenames with pattern: {item}_{context}_{metric}_across_{comparison}.png
+   - Old version saved as: src/plot_evaluation_results_OLD.py
+
+2. NEW DIRECTORY STRUCTURE:
+   
+   01_Evaluation_plots/
+   │
+   ├── 01_Accuracy/
+   │   │
+   │   ├── 01_Between_Features_in_same_plots/
+   │   │   ├── linear/
+   │   │   │   ├── WAVLM_BASE_linear_Accuracy_across_Features.png
+   │   │   │   ├── WAVLM_LARGE_linear_Accuracy_across_Features.png
+   │   │   │   ├── HUBERT_BASE_linear_Accuracy_across_Features.png
+   │   │   │   ├── HUBERT_LARGE_linear_Accuracy_across_Features.png
+   │   │   │   ├── WAV2VEC2_BASE_linear_Accuracy_across_Features.png
+   │   │   │   └── WAV2VEC2_LARGE_linear_Accuracy_across_Features.png
+   │   │   │       (6 plots: 3 features on each)
+   │   │   │
+   │   │   └── mlp_1x200/
+   │   │       └── [same 6 model plots]
+   │   │
+   │   ├── 02_Between_models_in_same_plots/
+   │   │   ├── linear/
+   │   │   │   ├── voiced_linear_Accuracy_across_models.png
+   │   │   │   ├── fricative_linear_Accuracy_across_models.png
+   │   │   │   └── nasal_linear_Accuracy_across_models.png
+   │   │   │       (3 plots: 6 models on each)
+   │   │   │
+   │   │   └── mlp_1x200/
+   │   │       └── [same 3 feature plots]
+   │   │
+   │   └── 03_Between_Architectures_in_same_plots/
+   │       ├── WAVLM_BASE/
+   │       │   ├── voiced_WAVLM_BASE_Accuracy_across_architectures.png
+   │       │   ├── fricative_WAVLM_BASE_Accuracy_across_architectures.png
+   │       │   └── nasal_WAVLM_BASE_Accuracy_across_architectures.png
+   │       │       (3 plots: 2 architectures on each)
+   │       │
+   │       ├── WAVLM_LARGE/ (3 plots)
+   │       ├── HUBERT_BASE/ (3 plots)
+   │       ├── HUBERT_LARGE/ (3 plots)
+   │       ├── WAV2VEC2_BASE/ (3 plots)
+   │       └── WAV2VEC2_LARGE/ (3 plots)
+   │
+   └── 02_F1_Score/
+       └── [Identical structure with F1Score in filenames]
+
+3. PLOT COUNT BREAKDOWN:
+   - Variant 1 (Between Features): 24 plots
+     * 2 architectures × 6 models × 2 metrics = 24
+   
+   - Variant 2 (Between Models): 12 plots
+     * 2 architectures × 3 features × 2 metrics = 12
+   
+   - Variant 3 (Between Architectures): 36 plots
+     * 6 models × 3 features × 2 metrics = 36
+   
+   TOTAL: 72 plots
+
+================================================================================
+FILENAME PATTERN:
+================================================================================
+
+Variant 1: {MODEL}_{ARCHITECTURE}_{METRIC}_across_Features.png
+   Example: WAVLM_BASE_linear_Accuracy_across_Features.png
+   Meaning: Shows voiced, fricative, nasal curves for WAVLM_BASE using linear probes
+
+Variant 2: {FEATURE}_{ARCHITECTURE}_{METRIC}_across_models.png
+   Example: voiced_linear_Accuracy_across_models.png
+   Meaning: Shows all 6 models' performance on 'voiced' feature using linear probes
+
+Variant 3: {FEATURE}_{MODEL}_{METRIC}_across_architectures.png
+   Example: voiced_WAVLM_BASE_Accuracy_across_architectures.png
+   Meaning: Compares linear vs mlp_1x200 for WAVLM_BASE on 'voiced' feature
+
+================================================================================
+BENEFITS:
+================================================================================
+
+1. CLARITY: Folder names explicitly state what comparison is being made
+2. DESCRIPTIVE FILENAMES: No need to open plot to understand what it shows
+3. ORGANIZED: Easy to find specific comparison type
+4. SCALABLE: Adding new models/features/architectures is straightforward
+5. RESEARCH-FRIENDLY: Professional structure suitable for paper figures
+
+================================================================================
+OLD vs NEW STRUCTURE:
+================================================================================
+
+OLD (Confusing):
+  01_Accuracy/
+    linear/           # Mixed Variant 1 and Variant 2 plots
+    02_Between_models/MODEL/  # Variant 2 grouped by model (wrong!)
+    03_Between_Architectures/ARCH/  # Mixed model and feature plots
+
+NEW (Clear):
+  01_Accuracy/
+    01_Between_Features_in_same_plots/ARCH/
+    02_Between_models_in_same_plots/ARCH/
+    03_Between_Architectures_in_same_plots/MODEL/
+
+================================================================================
+USAGE FOR NEW DATASETS (e.g., BUCKEYE):
+================================================================================
+
+To generate plots for BUCKEYE dataset:
+
+1. Train probes and generate evaluation summaries for BUCKEYE
+   
+2. Run plotting script:
+   python src/plot_evaluation_results.py --dataset-name BUCKEYE
+
+3. Plots will be created in:
+   02_OUTPUTS/BUCKEYE_Outputs/plots/01_Evaluation_plots/
+   
+   With identical structure to TIMIT
+
+================================================================================
+VERIFICATION:
+================================================================================
+
+✓ Total plots: 72 (verified with find command)
+✓ All filenames follow pattern
+✓ Directory structure matches specification
+✓ Old confusing structure removed
+✓ Script updated and tested
+✓ Changes committed to git
+
+================================================================================
